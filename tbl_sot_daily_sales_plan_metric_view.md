@@ -236,12 +236,18 @@ Para que Genie pueda combinar plan vs real, ambas metric views deben estar regis
 | **Gerencia Zona** | `gerencia_zona_desc` | `gerencia_de_zona_desc` | Geografía |
 | **Zona** | `zona_desc` | `zona_desc` | Geografía |
 | **Año** | `anio` | `anio_natural` | Tiempo |
-| **Mes** | `mes` | `mes_natural` | Tiempo |
-| **Año-Mes** | *(no existe aún en real)* | `anio_mes` | Tiempo ⚠️ |
+| **Mes** | `mes` | `mes_natural` | Tiempo ✅ |
+| **Año-Mes** | `anio_mes` *(agregar a real)* | `anio_mes` | Tiempo ⚠️ |
 
-> ⚠️ **Canal Estrategico**: En ventas reales, la lógica DISCOUNTERS reclasifica dos cadenas específicas. En el plan no existe `cliente_cadena`, por lo que los valores de canal en el plan no reflejarán esa reclasificación. Para tener consistencia perfecta sería necesario que en el plan también se definieran como DISCOUNTERS las unidades comerciales/canales equivalentes.
+> ✅ **Mes**: Confirmado que `mes_natural` en el plan usa formato `'01','02'...` — idéntico al campo `mes` de ventas reales. El join sobre `Mes` funciona sin transformación.
 >
-> ⚠️ **Año-Mes**: Para que el join a nivel mensual funcione en Genie, se recomienda agregar la dimensión `Año-Mes` también a la metric view de ventas reales, usando la expresión: `CONCAT(anio, '-', mes)` — siempre que el formato de `anio_mes` en el plan sea `YYYY-MM`. Si el plan usa formato `YYYYMM`, la expresión en el real sería `CONCAT(anio, mes)`.
+> ✅ **Año-Mes**: Confirmado que `anio_mes` usa formato `YYYYMM` en ambas tablas (columna #4 en ventas reales, columna #66 en plan). El join es directo con `expr: anio_mes` en ambas metric views.
+>
+> ⚠️ **Año-Mes (acción pendiente)**: Agregar la dimensión `Año-Mes` a la metric view de ventas reales con `expr: anio_mes`. La columna ya existe en la tabla fuente — solo falta exponerla en el YAML.
+>
+> ⚠️ **Canal Estrategico**: En ventas reales, la lógica DISCOUNTERS reclasifica dos cadenas específicas. En el plan no existe `cliente_cadena`, por lo que los valores de canal en el plan no reflejarán esa reclasificación.
+>
+> ℹ️ **Granularidad diaria vs mensual**: El real tiene datos por día; el plan es mensual. Genie agrega automáticamente el real a nivel de mes cuando compara plan vs real. Las dimensiones `Dia`, `fecha`, `Semana` y `dia_semana_abrev` del real no tienen equivalente en el plan y solo aplican a consultas de ventas reales.
 
 ---
 
@@ -257,7 +263,9 @@ Para que Genie pueda combinar plan vs real, ambas metric views deben estar regis
 
 - Esta es una **Metric View** de Databricks versión 1.1, diseñada para ser consumida por **Genie AI** junto con la metric view de ventas reales.
 - Tiene **1 medida** (`HL Plan`) y **25 dimensiones**.
-- El plan no tiene granularidad de día: no existen las dimensiones `Dia`, `fecha`, `Semana` ni `dia_semana_abrev`. Las preguntas en Genie sobre días específicos solo aplican a la metric view de ventas reales.
+- El plan tiene granularidad **mensual** (el real es diario). Genie agrega el real a nivel de mes automáticamente al comparar plan vs real. Las dimensiones `Dia`, `fecha`, `Semana` y `dia_semana_abrev` solo aplican a la metric view de ventas reales.
+- `mes_natural` en el plan usa formato `'01','02'...` — mismo formato que `mes` en el real. El join sobre `Mes` funciona directo.
+- `anio_mes` usa formato `YYYYMM` en ambas tablas fuente. Para activar el join por `Año-Mes` en Genie, agregar `expr: anio_mes` a la metric view de ventas reales (la columna ya existe en esa tabla).
 - La dimensión **`Version Plan`** es exclusiva del plan y permite distinguir entre versión de cuota original y revisiones posteriores.
 - Fuente directa: `heiaepmx002pwe01.gold_hnk_mx_loc_sellin.tbl_sot_daily_sales_plan`
 
